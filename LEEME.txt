@@ -1,0 +1,20 @@
+HAZTE UN CANUTILLO — NETLIFY
+
+ATENCION: Este proyecto tiene funciones de servidor. NO funciona subiendo el ZIP a Netlify Drop (solo archivos estáticos).
+
+PUBLICAR:
+1. Descomprime el ZIP.
+2. Crea un repositorio en GitHub y sube TODO el contenido de la carpeta descomprimida a la raiz del repositorio (index.html, netlify.toml, package.json, carpeta netlify/, preguntas, imagenes).
+3. En Netlify: Add new project > Import an existing project > GitHub > selecciona el repositorio.
+4. Netlify detectara netlify.toml. Publica el sitio con Deploy.
+5. Abre https://TU-SITIO.netlify.app/?modo=tv en la TV. En los moviles entra en https://TU-SITIO.netlify.app/ o escanea el QR.
+6. Cada jugador escribe su nombre y pulsa Estoy listo. La partida arranca cuando hay exactamente cuatro.
+
+LIMITACIONES IMPORTANTES:
+- Es un prototipo sin pruebas con cuatro dispositivos reales. Prueba antes de jugar.
+- El almacenamiento compartido mediante Netlify Blobs no ofrece transacciones atomicas de varios jugadores; dos apuestas simultaneas pueden producir conflictos y perderse alguna actualizacion. Es posible que un jugador tenga que reintentar. Para un juego robusto hace falta un backend transaccional.
+- El enlace QR se genera mediante un servicio externo de imagenes; si falla, comparte el enlace escrito.
+- La lista inicial tiene 60 preguntas; se conservan los IDs utilizados entre partidas hasta agotar el banco. Para anadir preguntas, edita questions.json y conserva las filas anteriores y su orden. No elimines preguntas antiguas.
+- El banco de preguntas no esta extraido de manera exhaustiva de los videos.
+- No hay autenticacion fuerte ni proteccion frente a trampas. Uso informal privado.
+- No se ha comprobado un despliegue real en Netlify. Si aparece un error de compilacion, comprueba que la version de Node del sitio sea 22 o posterior.
