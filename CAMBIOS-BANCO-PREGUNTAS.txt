@@ -1,0 +1,10 @@
+HAZTE UN CANUTILLO — BANCO AMPLIADO
+
+Banco: 150 preguntas (60 originales conservadas + 90 nuevas).
+Niveles: {'dificil': 50, 'media': 50, 'facil': 50}
+
+No se borraron preguntas originales porque el ZIP no contiene un registro fiable de cuáles salieron en partidas anteriores y cuáles quedaron sin salir por reinicios. Sus identificadores se han conservado para respetar la lista de preguntas ya usadas guardada en Netlify.
+
+Se mantienen las correcciones de apuestas, teclado móvil, eliminaciones, re-roll y reinicio de la versión de partida.
+
+Publicación: subir todos los archivos del contenido de la carpeta, incluidos questions.json y dificultades.json, al repositorio de GitHub.
