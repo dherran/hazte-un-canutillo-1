@@ -1,0 +1,10 @@
+CAMBIOS EN ESTA VERSION
+
+1. Una pregunta solo se guarda como utilizada al resolverse la ronda (cuando se revela la respuesta), no cuando aparece.
+2. Si se reinicia o abandona una ronda sin resolver, esa pregunta sigue disponible en partidas futuras.
+3. El re-roll no vuelve a seleccionar inmediatamente la misma pregunta descartada; tampoco la marca como respondida.
+4. El historial de preguntas respondidas se conserva entre partidas y reinicios en Netlify Blobs.
+5. Se mantiene el banco de 150 preguntas y sus 150 pistas contextuales en pistas.json. La pista no elimina opciones; la ruleta conserva esa función.
+6. Se mantienen las correcciones previas de apuestas, teclado, jugadores y reinicios.
+
+NOTA: Este cambio no puede recuperar automáticamente preguntas marcadas como usadas por versiones anteriores, ya que el registro antiguo no distinguia entre mostradas y respondidas.

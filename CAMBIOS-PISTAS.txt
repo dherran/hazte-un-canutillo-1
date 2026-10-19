@@ -1,0 +1,1 @@
+PISTAS CONTEXTUALES: 150 pistas específicas y revisadas. No descartan opciones como la ruleta; aportan datos para razonar. Editables en pistas.json.
