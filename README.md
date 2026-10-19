@@ -18,7 +18,7 @@ Los participantes responden desde sus móviles y siguen el desarrollo de la part
 
 1. Abre el **modo televisión** en un portátil o una pantalla grande.
 2. Cada concursante entra desde su móvil, escribe su nombre y pulsa **«Estoy listo»**.
-3. El presentador puede comenzar con **2 a 9 jugadores**; cuando los **10 concursantes** estén preparados, la partida puede iniciarse automáticamente.
+3. El presentador puede comenzar con **1 a 9 jugadores**; cuando los **10 concursantes** estén preparados, la partida puede iniciarse automáticamente.
 4. En cada ronda, los participantes distribuyen sus canutillos entre las respuestas que consideren correctas.
 5. Los canutillos **no apostados se queman**. La cantidad apostada a la respuesta correcta determina el saldo que se conserva según las reglas de la ronda.
 6. Quien termine una ronda con **0 canutillos** queda eliminado y deja de intervenir en las votaciones y apuestas posteriores.
@@ -26,7 +26,7 @@ Los participantes responden desde sus móviles y siguen el desarrollo de la part
 
 ## ✨ Características
 
-- 👥 **De 2 a 10 concursantes**, con acceso individual desde el móvil.
+- 👥 **De 1 a 10 concursantes**, con acceso individual desde el móvil.
 - 📺 **Pantalla de presentador** con seguimiento de la partida.
 - 🧠 **15 rondas**, divididas por dificultad:
   - **Rondas 1–5:** preguntas fáciles.

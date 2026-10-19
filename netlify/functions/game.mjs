@@ -9,7 +9,7 @@ const uid=()=>crypto.randomUUID();
 const STALE_MS=25000;
 const ABANDONED_MS=90000;
 const MAX_PLAYERS=10;
-const MIN_PLAYERS=2;
+const MIN_PLAYERS=1;
 const HEARTBEAT_SAVE_MS=8000; // Remove disconnected players from the waiting room after 25 seconds.
 const pruneLobby=s=>{if(s.phase!=='lobby')return false;let changed=false;for(const [id,p] of Object.entries(s.players)){if(!p.lastSeen||Date.now()-p.lastSeen>STALE_MS){delete s.players[id];changed=true;}}return changed;};
 const blank=()=>({phase:'lobby',round:0,players:{},q:null,deadline:0,used:[],catOptions:[],votes:{},rerollVotes:{},rerollUsed:false,reveal:null,announcement:'',session:uid()});
@@ -70,8 +70,8 @@ else if(action==='leave'){if(s.phase!=='lobby')throw Error('Solo puedes salir de
   }
 }
 else if(action==='ready'){if(s.phase!=='lobby'||!s.players[id])throw Error('No estás en la sala');s.players[id].ready=true;changed=true;if(Object.keys(s.players).length===MAX_PLAYERS&&Object.values(s.players).every(p=>p.ready)){s.phase='countdown';s.deadline=Date.now()+5000;}}
-else if(action==='tvstart'){if(s.phase!=='lobby')throw Error('La partida ya empezó');let ps=Object.values(s.players);if(ps.length<MIN_PLAYERS||ps.length>=MAX_PLAYERS||!ps.every(p=>p.ready))throw Error('Se necesitan entre 2 y 9 jugadores preparados');s.phase='countdown';s.deadline=Date.now()+5000;changed=true;}
-else if(action==='start'){if(s.phase!=='lobby'||!s.players[id])throw Error('No estás en la sala');let ps=Object.values(s.players);if(ps.length<MIN_PLAYERS||ps.length>MAX_PLAYERS||!ps.every(p=>p.ready))throw Error('Deben estar listos al menos 2 jugadores');s.phase='countdown';s.deadline=Date.now()+5000;changed=true;}
+else if(action==='tvstart'){if(s.phase!=='lobby')throw Error('La partida ya empezó');let ps=Object.values(s.players);if(ps.length<MIN_PLAYERS||ps.length>=MAX_PLAYERS||!ps.every(p=>p.ready))throw Error('Se necesitan entre 1 y 9 jugadores preparados');s.phase='countdown';s.deadline=Date.now()+5000;changed=true;}
+else if(action==='start'){if(s.phase!=='lobby'||!s.players[id])throw Error('No estás en la sala');let ps=Object.values(s.players);if(ps.length<MIN_PLAYERS||ps.length>MAX_PLAYERS||!ps.every(p=>p.ready))throw Error('Debe haber al menos 1 jugador preparado');s.phase='countdown';s.deadline=Date.now()+5000;changed=true;}
 else if(action==='bet'){let p=s.players[id],b=body.bet;if(s.phase!=='bet'||!p||p.balance<=0||p.locked)throw Error('No puedes apostar ahora');if(!Array.isArray(b)||b.length!==4||b.some(v=>!Number.isSafeInteger(v)||v<0)||b.reduce((a,v)=>a+v,0)>p.balance||b.filter(v=>v>0).length>3||b.some((v,i)=>v>0&&p.eliminated.includes(i)))throw Error('La apuesta no puede superar tu saldo ni repartirse entre más de 3 opciones válidas');p.bet=b;p.locked=true;changed=true;if(allLocked(s))resolve(s);}
 else if(action==='power'){let p=s.players[id],type=body.type;if(s.phase!=='bet'||!p||p.balance<=0||p.locked||!['wheel','hint','call'].includes(type)||p.used[type])throw Error('Comodín no disponible');p.used[type]=true;if(type==='wheel'){p.spin=Math.floor(Math.random()*4);p.eliminated=[0,1,2,3].filter(i=>i!==s.q.answer).sort(()=>Math.random()-.5).slice(0,p.spin);}if(type==='hint')p.hint=s.q.hint;if(type==='call')p.callUntil=Date.now()+40000;s.announcement=p.name+' usa '+({wheel:'la RULETA',hint:'la PISTA',call:'la LLAMADA'}[type]);s.powerAlert={name:p.name,type,until:Date.now()+5000,round:s.round};changed=true;}
 else if(action==='vote'){if(s.phase!=='category'||!s.players[id]||s.players[id].balance<=0||!s.catOptions.includes(body.cat))throw Error('No puedes votar ahora');s.votes[id]=body.cat;changed=true;if(Object.keys(s.votes).length===active(s).length)finishVote(s);}

@@ -1,0 +1,3 @@
+MODO UN JUGADOR
+
+Ahora se puede iniciar una partida con una sola persona preparada desde el móvil o desde la pantalla de TV. Se mantienen las partidas de 2 a 10 jugadores y el inicio automático al completar 10. Las preguntas, apuestas, comodines, historial y reglas de eliminación no cambian.
