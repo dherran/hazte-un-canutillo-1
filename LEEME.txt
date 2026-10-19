@@ -8,13 +8,31 @@ PUBLICAR:
 3. En Netlify: Add new project > Import an existing project > GitHub > selecciona el repositorio.
 4. Netlify detectara netlify.toml. Publica el sitio con Deploy.
 5. Abre https://TU-SITIO.netlify.app/?modo=tv en la TV. En los moviles entra en https://TU-SITIO.netlify.app/ o escanea el QR.
-6. Cada jugador escribe su nombre y pulsa Estoy listo. La partida arranca cuando hay exactamente cuatro.
+6. Cada jugador escribe su nombre y pulsa Estoy listo. Pueden jugar de 2 a 10 personas. Con 2–9 jugadores listos se inicia manualmente desde la TV o un móvil; con 10 listos arranca automáticamente.
 
 LIMITACIONES IMPORTANTES:
-- Es un prototipo sin pruebas con cuatro dispositivos reales. Prueba antes de jugar.
-- El almacenamiento compartido mediante Netlify Blobs no ofrece transacciones atomicas de varios jugadores; dos apuestas simultaneas pueden producir conflictos y perderse alguna actualizacion. Es posible que un jugador tenga que reintentar. Para un juego robusto hace falta un backend transaccional.
+- Hay pruebas automatizadas de las reglas y del cliente; falta validar con varios dispositivos reales. Prueba antes de jugar.
+- Las actualizaciones de la sala usan lecturas consistentes y escrituras condicionales por ETag en Netlify Blobs 11. Si hay un conflicto, la función recarga el estado y reintenta hasta 12 veces. Si se agotan los intentos devuelve 503 para reintentar desde el cliente. No se usa un bloqueo en memoria, que no coordinaría distintas funciones.
 - El enlace QR se genera mediante un servicio externo de imagenes; si falla, comparte el enlace escrito.
 - La lista inicial tiene 60 preguntas; se conservan los IDs utilizados entre partidas hasta agotar el banco. Para anadir preguntas, edita questions.json y conserva las filas anteriores y su orden. No elimines preguntas antiguas.
 - El banco de preguntas no esta extraido de manera exhaustiva de los videos.
 - No hay autenticacion fuerte ni proteccion frente a trampas. Uso informal privado.
 - No se ha comprobado un despliegue real en Netlify. Si aparece un error de compilacion, comprueba que la version de Node del sitio sea 22 o posterior.
+
+DESARROLLO Y PRUEBAS:
+- Node.js 22 o posterior; npm ci para instalar las versiones del package-lock.json.
+- npm test ejecuta las pruebas con node:test, sin credenciales ni servicios externos.
+- npm run check comprueba la sintaxis de la función.
+- Para la aplicación completa: npx netlify-cli@27.13.0 dev --offline --port 8888 --no-open --skip-gitignore --internal-disable-edge-functions
+  No hay Edge Functions en este proyecto. Blobs funciona en modo local, sin vincular un sitio ni iniciar sesión. No mezclar datos de pruebas con una partida local en curso.
+- GitHub Actions ejecuta instalación, comprobación y pruebas en los pull requests.
+
+SINCRONIZACIÓN Y REINICIO:
+- Los móviles envían la sesión y, en acciones de pregunta, el número e ID de pregunta. Una acción de una sesión o pregunta anterior se rechaza con 409 y el cliente actualiza la sala.
+- Las peticiones del navegador se ejecutan en orden; los relojes se ajustan a la hora de la función. La TV no utiliza el identificador guardado del móvil ni renueva su presencia.
+- El botón Reiniciar partida permanece arriba a la derecha en la TV, por encima de las alertas. Pide confirmación y limpia participantes, preguntas utilizadas, ronda y comodines para empezar desde cero.
+- Se conserva Nueva partida (con preguntas inéditas) al finalizar: esta opción mantiene las preguntas utilizadas, a diferencia del reinicio completo de TV.
+- Al publicar esta versión, recargar las pantallas ya abiertas para que envíen los nuevos campos de sincronización. No hay cambios en el banco de preguntas ni en las reglas de apuestas, comodines o alertas.
+
+NOTA SOBRE CONCURRENCIA LOCAL:
+- El emulador de Blobs incluido en Netlify CLI 27.13.0 comprueba el ETag y después escribe en disco de forma asíncrona, sin exclusión entre ambas operaciones. En la prueba de navegador con dos confirmaciones simultáneas se perdió una confirmación. Las pruebas unitarias simulan escrituras condicionales atómicas entre instancias y verifican los reintentos, pero no garantizan el comportamiento del servicio desplegado. La prueba funcional con Chromium se completó confirmando los jugadores secuencialmente. Validar concurrencia en un sitio de prueba de Netlify antes de usarlo en una partida real.

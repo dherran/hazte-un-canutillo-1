@@ -15,7 +15,7 @@ const abandonInactiveGame=s=>{if(s.phase==='lobby'||!Object.keys(s.players).leng
 const active=s=>Object.values(s.players).filter(p=>p.balance>0);
 const allLocked=s=>active(s).every(p=>p.locked);
 const response=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json','cache-control':'no-store','access-control-allow-origin':'*'}});
-const pick=(s,cat)=>{let pool=questions.map((x,id)=>({x,id})).filter(o=>!s.used.includes(o.id)&&(!cat||o.x[0]===cat));if(!pool.length)pool=questions.map((x,id)=>({x,id})).filter(o=>!s.used.includes(o.id));if(!pool.length){s.phase='exhausted';s.deadline=0;return;}let {x,id}=pool[Math.floor(Math.random()*pool.length)];s.used.push(id);s.q={id,cat:x[0],text:x[1],options:x.slice(2,6),answer:x[6],hint:SAFE_HINTS[id]||'Piensa en el contexto de la pregunta y descarta opciones imposibles.'};s.round++;s.phase='bet';s.deadline=Date.now()+90000;s.reveal=null;s.rerollVotes={};s.announcement='Pregunta '+s.round;for(let p of Object.values(s.players)){p.bet=[0,0,0,0];p.locked=p.balance<=0;p.eliminated=[];p.hint='';p.callUntil=0;p.spin=null;p.hiddenAt=0;p.hiddenRound=0;p.penaltyRound=0;}};
+const pick=(s,cat)=>{let pool=questions.map((x,id)=>({x,id})).filter(o=>!s.used.includes(o.id)&&(!cat||o.x[0]===cat));if(!pool.length)pool=questions.map((x,id)=>({x,id})).filter(o=>!s.used.includes(o.id));if(!pool.length){s.phase='exhausted';s.deadline=0;return;}let {x,id}=pool[Math.floor(Math.random()*pool.length)];s.used.push(id);s.q={id,cat:x[0],text:x[1],options:x.slice(2,6),answer:x[6],hint:SAFE_HINTS[id]||'Piensa en el contexto de la pregunta y descarta opciones imposibles.'};s.round++;s.phase='bet';s.deadline=Date.now()+90000;s.reveal=null;s.rerollVotes={};delete s.powerAlert;s.announcement='Pregunta '+s.round;for(let p of Object.values(s.players)){p.bet=[0,0,0,0];p.locked=p.balance<=0;p.eliminated=[];p.hint='';p.callUntil=0;p.spin=null;p.hiddenAt=0;p.hiddenRound=0;p.penaltyRound=0;}};
 const resolve=s=>{if(s.phase!=='bet')return;for(let p of Object.values(s.players)){if(p.balance>0)p.balance=p.bet[s.q.answer]||0;p.locked=true;}s.reveal={answer:s.q.answer,hint:s.q.hint};s.phase='reveal';s.deadline=Date.now()+6500;s.announcement='Respuesta correcta: '+s.q.options[s.q.answer];};
 const next=s=>{if(!active(s).length){s.phase='finished';s.deadline=0;s.announcement='Todos los concursantes han sido eliminados.';return;}if(s.round>=15){s.phase='finished';s.deadline=0;return;}if(s.round%3===0){let cats=[...new Set(questions.map(q=>q[0]))].filter(c=>questions.some((q,i)=>q[0]===c&&!s.used.includes(i))).sort(()=>Math.random()-.5);if(cats.length>=2){s.catOptions=cats.slice(0,2);s.votes={};s.phase='category';s.deadline=Date.now()+22000;return;}}pick(s);};
 const finishVote=s=>{let [a,b]=s.catOptions,va=Object.values(s.votes).filter(v=>v===a).length,vb=Object.values(s.votes).filter(v=>v===b).length;pick(s,va===vb?(Math.random()<.5?a:b):(va>vb?a:b));};
@@ -49,11 +49,28 @@ const registerReturn=(s,p)=>{
     s.announcement='🚫 '+p.name+': tercera salida. Pierde la apuesta de esta pregunta.';
     if(allLocked(s))resolve(s);
   }
+  if(s.phase==='bet'&&allLocked(s))resolve(s);
   s.anticheatAlert={name:p.name,level:Math.min(p.infractions,3),until:Date.now()+6500};
   return true;
 };
 const pub=(s,id)=>{let p=s.players[id];return {...s,q:s.q?{id:s.q.id,cat:s.q.cat,text:s.q.text,options:s.q.options}:null,players:Object.fromEntries(Object.entries(s.players).map(([k,v])=>[k,{name:v.name,ready:!!v.ready,balance:v.balance,locked:v.locked,used:v.used,spin:k===id?v.spin:null,eliminated:k===id?v.eliminated:[],hint:k===id?v.hint:'',callUntil:k===id?v.callUntil:0,infractions:v.infractions||0,out:v.balance<=0}])),me:p?{...p}:null};};
-export default async (request)=>{try{let body=request.method==='POST'?await request.json():{},action=body.action||'state',id=body.id||'',db=store(),s=await db.get('room',{type:'json'})||blank();let changed=abandonInactiveGame(s);changed=tick(s)||changed;changed=pruneLobby(s)||changed;if(action==='join'){if(s.phase!=='lobby')throw Error('La partida ya empezó');if(Object.keys(s.players).length>=MAX_PLAYERS)throw Error('La sala está llena');let name=String(body.name||'').trim().slice(0,24);if(!name)throw Error('Introduce tu nombre');if(Object.values(s.players).some(p=>p.name.toLowerCase()===name.toLowerCase()))throw Error('Nombre ya utilizado');id=uid();s.players[id]={lastSeen:Date.now(),name,balance:1000000,ready:false,locked:false,bet:[0,0,0,0],used:{wheel:false,hint:false,call:false},spin:null,eliminated:[],hint:'',callUntil:0,hiddenAt:0,hiddenRound:0,penaltyRound:0,infractions:0};changed=true;}
+// Inject the store in tests; production uses Netlify's strongly consistent store.
+export const createGameHandler=(getDatabase=store)=>async request=>{
+ try{
+  const body=request.method==='POST'?await request.json():{};
+  const action=body.action||'state',db=getDatabase();
+  for(let attempt=0;attempt<12;attempt++){
+   const snapshot=await db.getWithMetadata('room',{type:'json'});
+   if(snapshot&&!snapshot.etag)return response({error:'El almacenamiento no permite una actualización segura. Inténtalo de nuevo.'},503);
+   let s=snapshot?.data||blank(),id=body.id||'';
+   const revision=s.revision||0;
+   if(action!=='state'&&action!=='join'&&body.session!==s.session)
+    return response({error:'La partida ha cambiado. Actualiza la sala.'},409);
+   let changed=!snapshot;changed=abandonInactiveGame(s)||changed;changed=tick(s)||changed;changed=pruneLobby(s)||changed;
+   if(['bet','power','vote','reroll','visibility'].includes(action)&&
+      (body.round!==s.round||body.questionId!==(s.q?.id??null)))
+    return response({error:'La pregunta ha cambiado. Actualiza la sala.'},409);
+   if(action==='join'){if(s.phase!=='lobby')throw Error('La partida ya empezó');if(Object.keys(s.players).length>=MAX_PLAYERS)throw Error('La sala está llena');let name=String(body.name||'').trim().slice(0,24);if(!name)throw Error('Introduce tu nombre');if(Object.values(s.players).some(p=>p.name.toLowerCase()===name.toLowerCase()))throw Error('Nombre ya utilizado');id=uid();s.players[id]={lastSeen:Date.now(),name,balance:1000000,ready:false,locked:false,bet:[0,0,0,0],used:{wheel:false,hint:false,call:false},spin:null,eliminated:[],hint:'',callUntil:0,hiddenAt:0,hiddenRound:0,penaltyRound:0,infractions:0};changed=true;}
 else if(action==='leave'){if(s.phase!=='lobby')throw Error('Solo puedes salir de la sala antes de empezar');if(s.players[id]){delete s.players[id];changed=true;}}
  else if(action==='reset'){if(s.phase!=='lobby')throw Error('Solo puedes reiniciar la sala antes de empezar');if(!s.players[id])throw Error('No estás en la sala');let used=s.used;s=blank();s.used=used;changed=true;}
  else if(action==='visibility'){
@@ -75,12 +92,23 @@ else if(action==='power'){let p=s.players[id],type=body.type;if(s.phase!=='bet'|
 else if(action==='vote'){if(s.phase!=='category'||!s.players[id]||s.players[id].balance<=0||!s.catOptions.includes(body.cat))throw Error('No puedes votar ahora');s.votes[id]=body.cat;changed=true;if(Object.keys(s.votes).length===active(s).length)finishVote(s);}
 else if(action==='reroll'){if(s.phase!=='bet'||s.round<11||s.rerollUsed||!s.players[id]||s.players[id].balance<=0)throw Error('Re-roll no disponible');s.rerollVotes[id]=true;changed=true;if(Object.entries(s.rerollVotes).filter(([v,yes])=>yes&&s.players[v]?.balance>0).length>=Math.max(1,Math.ceil(active(s).length*0.75))){s.rerollUsed=true;s.round--;pick(s);s.announcement='¡Re-roll aprobado!';}}
 else if(action==='new'){if(s.phase!=='finished'&&s.phase!=='exhausted')throw Error('La partida no ha terminado');let used=s.used;s=blank();s.used=used;changed=true;}
-else if(action==='tvreset'){if(body.confirm!=='REINICIAR')throw Error('Confirma el reinicio desde la televisión');let used=s.used;s=blank();s.used=used;changed=true;}
+else if(action==='tvreset'){if(body.confirm!=='REINICIAR')throw Error('Confirma el reinicio desde la televisión');s=blank();changed=true;}
 else if(action!=='state')throw Error('Acción desconocida');
- if(s.players[id]&&action==='state'&&s.players[id].hiddenAt&&!body.hidden){
+ if(s.players[id]&&action==='state'&&s.players[id].hiddenAt&&body.hidden===false){
   changed=registerReturn(s,s.players[id])||changed;
 }
 if(s.players[id]&&action!=='leave'&&action!=='reset'){const last=s.players[id].lastSeen||0;s.players[id].lastSeen=Date.now();if(action==='state'&&Date.now()-last>HEARTBEAT_SAVE_MS)changed=true;}
 if(s.phase==='countdown'&&Date.now()>=s.deadline){pick(s);changed=true;}
-if(changed)await db.setJSON('room',s);return response({state:pub(s,id),id});}catch(e){return response({error:e.message||'Error del servidor'},400);}};
+if(changed){
+ s.revision=revision+1;
+ // A losing writer reloads and reapplies the action, never overwrites newer state.
+ const result=await db.setJSON('room',s,snapshot?{onlyIfMatch:snapshot.etag}:{onlyIfNew:true});
+ if(!result.modified)continue;
+}
+return response({state:pub(s,id),id,serverNow:Date.now()});
+  }
+  return response({error:'La sala está ocupada. Inténtalo de nuevo.'},503);
+ }catch(e){return response({error:e.message||'Error del servidor'},400);}
+};
+export default createGameHandler();
 export const config={path:'/api/game'};

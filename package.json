@@ -1,1 +1,13 @@
-{"name":"hazte-un-canutillo","version":"1.0.0","private":true,"type":"module","dependencies":{"@netlify/blobs":"^9.1.2"}}
+{
+  "name": "hazte-un-canutillo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "11.1.4"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check netlify/functions/game.mjs"
+  }
+}
